@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +22,8 @@ func main() {
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/singup", homeHandler)
 	http.HandleFunc("/edit", homeHandler)
+
+	fmt.Println("Serving on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -46,5 +50,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginHandlerPost(w http.ResponseWriter, r *http.Request) {
+	buf, bodyErr := ioutil.ReadAll(r.Body)
+	if bodyErr != nil {
+		log.Print("bodyErr ", bodyErr.Error())
+		http.Error(w, bodyErr.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	rdr1 := ioutil.NopCloser(bytes.NewBuffer(buf))
+	log.Printf("BODY: %q", rdr1)
 }
