@@ -9,7 +9,6 @@ import (
 	"os"
 )
 
-
 func main() {
 	db, err := sql.Open("mysql", getDSN())
 	if err != nil {
@@ -18,7 +17,7 @@ func main() {
 	defer db.Close()
 
 	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/login", homeHandler)
+	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/singup", homeHandler)
 	http.HandleFunc("/edit", homeHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -39,3 +38,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello World!")
 }
 
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		loginHandlerPost(w, r)
+	}
+}
+
+func loginHandlerPost(w http.ResponseWriter, r *http.Request) {
+
+}
