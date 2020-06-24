@@ -78,15 +78,28 @@ func signupHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginHandlerPost(w http.ResponseWriter, r *http.Request) {
-	body, bodyErr := ioutil.ReadAll(r.Body)
-	if bodyErr != nil {
-		log.Print("bodyErr ", bodyErr.Error())
-		http.Error(w, bodyErr.Error(), http.StatusInternalServerError)
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Print("bodyErr ", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	req := &LoginRequest{}
 	json.Unmarshal(body, req)
+
+	var user User
+	user, err = queryUser(req.Username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+
+	}
 
 }
 
