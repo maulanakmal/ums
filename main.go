@@ -1,12 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"io"
+	"golang.org/x/crypto/bcrypt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,6 +15,19 @@ import (
 type LoginRequest struct {
 	Username string
 	Password string
+}
+
+type RegisterRequest struct {
+	Username string
+	Nickname string
+	Password string
+}
+
+type User struct {
+	Username string
+	Nickname string
+	Password string
+	PicID    string
 }
 
 var db *sql.DB
@@ -76,40 +88,60 @@ func loginHandlerPost(w http.ResponseWriter, r *http.Request) {
 	req := &LoginRequest{}
 	json.Unmarshal(body, req)
 
-	stmtSelect, err := db.Prepare("SELECT password FROM user_tab WHERE username = ?")
-	if err != nil {
-		panic(err.Error())
-	}
-	defer stmtSelect.Close()
-
-	row := stmtSelect.QueryRow(req.Username)
-
-	var password string
-	row.Scan(&password)
-
-	if password == req.Password {
-		fmt.Fprint(w, "YES")
-	} else {
-		fmt.Fprint(w, "NO")
-	}
 }
 
 func signupHandlerPost(w http.ResponseWriter, r *http.Request) {
-	log.Print("hit /signup")
-	file, header, err := r.FormFile("file")
-	defer file.Close()
-
+	log.Print("hit signup")
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	buf := bytes.NewBuffer(nil)
-	if _, err := io.Copy(buf, file); err != nil {
+	req := RegisterRequest{}
+	json.Unmarshal(body, &req)
+
+	_, err = queryUser(req.Username)
+	switch {
+	case err == nil:
+		http.Error(w, "user exists", http.StatusInternalServerError)
 		return
+	case err == sql.ErrNoRows:
+		err = addUser(req)
+		if err != nil {
+			panic(err.Error())
+			http.Error(w, "add user fails", http.StatusInternalServerError)
+			return
+		}
+		fmt.Fprint(w, "YES")
+	default:
+		panic(err.Error())
+		fmt.Fprint(w, "error")
 	}
 
-	log.Printf("file header %s", header.Filename)
-	cnt, _ := buf.ReadString('\n')
-	log.Printf("file content %s", cnt)
+}
+
+func queryUser(username string) (User, error) {
+	var user User
+	err := db.QueryRow("SELECT username, nickname, password, pic_id FROM user_tab WHERE username = ?", username).Scan(&user.Username, &user.Nickname, &user.Password, &user.PicID)
+
+	return user, err
+}
+
+func addUser(req RegisterRequest) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	log.Print(hash)
+	log.Print(len(hash))
+	log.Print(string(hash))
+	log.Print(len(string(hash)))
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("INSERT INTO user_tab(username, nickname, password) VALUES(?, ?, ?)", req.Username, req.Nickname, hash)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
