@@ -126,29 +126,38 @@ func changePicHandler(w http.ResponseWriter, r *http.Request) {
 
 func changePicHandlerPost(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
-	picFile, _, err := r.FormFile("pic")
+	picFile, header, err := r.FormFile("pic")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	tempFile, err := ioutil.TempFile("temp-images", "upload-*.png")
+	_, err = queryUser(username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	log.Print(header.Filename)
+
+	l := len(header.Filename)
+	log.Print(header.Filename[l-4:])
 	if err != nil {
 		fmt.Println(err)
 	}
-	defer tempFile.Close()
 
-	// read all of the contents of our uploaded file into a
-	// byte array
 	fileBytes, err := ioutil.ReadAll(picFile)
 	if err != nil {
 		fmt.Println(err)
 	}
-	// write this byte array to our temporary file
-	tempFile.Write(fileBytes)
 
-	fmt.Fprintf(w, "username %s", username)
-	//fmt.Fprintf(w, "header %q", header)
+	ioutil.WriteFile("/Users/maulanaakmal/.ums-profile-images/"+username+header.Filename[l-4:], fileBytes, 0644)
+
+	_, err = db.Exec("UPDATE user_tab SET pic_id = ? WHERE username = ?", username, username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func editHandler(w http.ResponseWriter, r *http.Request) {
