@@ -43,6 +43,8 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/login", loginHandler)
 	http.HandleFunc("/signup", signupHandler)
+	http.HandleFunc("/change_nickname", changeNicknameHandler)
+	http.HandleFunc("/change_pic", changePicHandler)
 
 	fmt.Println("Serving on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -71,6 +73,31 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func signupHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		signupHandlerPost(w, r)
+	}
+}
+
+func changeNicknameHandler(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method == http.MethodPost:
+		changeNicknameHandlerPost(w, r)
+	}
+}
+
+func changeNicknameHandlerPost(w http.ResponseWriter, r *http.Request) {}
+
+func changePicHandler(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method == http.MethodPost:
+		changePicHandlerPost(w, r)
+	}
+}
+
+func changePicHandlerPost(w http.ResponseWriter, r *http.Request) {}
+
+func editHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		signupHandlerPost(w, r)
