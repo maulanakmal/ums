@@ -23,6 +23,11 @@ type RegisterRequest struct {
 	Password string
 }
 
+type ChangeNicknameRequest struct {
+	Username string
+	Nickname string
+}
+
 type User struct {
 	Username string
 	Nickname string
@@ -86,7 +91,31 @@ func changeNicknameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func changeNicknameHandlerPost(w http.ResponseWriter, r *http.Request) {}
+func changeNicknameHandlerPost(w http.ResponseWriter, r *http.Request) {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Print("bodyErr ", err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	req := &ChangeNicknameRequest{}
+	json.Unmarshal(body, req)
+
+	fmt.Fprintf(w, "change nickname request %v", req)
+
+	_, err = queryUser(req.Username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	_, err = db.Exec("UPDATE user_tab SET nickname = ? WHERE username = ?", req.Nickname, req.Username)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
 
 func changePicHandler(w http.ResponseWriter, r *http.Request) {
 	switch {
