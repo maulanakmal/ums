@@ -124,7 +124,32 @@ func changePicHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func changePicHandlerPost(w http.ResponseWriter, r *http.Request) {}
+func changePicHandlerPost(w http.ResponseWriter, r *http.Request) {
+	username := r.FormValue("username")
+	picFile, _, err := r.FormFile("pic")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tempFile, err := ioutil.TempFile("temp-images", "upload-*.png")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer tempFile.Close()
+
+	// read all of the contents of our uploaded file into a
+	// byte array
+	fileBytes, err := ioutil.ReadAll(picFile)
+	if err != nil {
+		fmt.Println(err)
+	}
+	// write this byte array to our temporary file
+	tempFile.Write(fileBytes)
+
+	fmt.Fprintf(w, "username %s", username)
+	//fmt.Fprintf(w, "header %q", header)
+}
 
 func editHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
