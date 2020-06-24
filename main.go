@@ -94,7 +94,6 @@ func changeNicknameHandler(w http.ResponseWriter, r *http.Request) {
 func changeNicknameHandlerPost(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Print("bodyErr ", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -150,6 +149,7 @@ func changePicHandlerPost(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
+	// TODO get dir from config file
 	ioutil.WriteFile("/Users/maulanaakmal/.ums-profile-images/"+username+header.Filename[l-4:], fileBytes, 0644)
 
 	_, err = db.Exec("UPDATE user_tab SET pic_id = ? WHERE username = ?", username, username)
@@ -160,17 +160,10 @@ func changePicHandlerPost(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func editHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		signupHandlerPost(w, r)
-	}
-}
-
+// TODO set up auth system
 func loginHandlerPost(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Print("bodyErr ", err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -188,9 +181,9 @@ func loginHandlerPost(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-
 	}
 
+	w.WriteHeader(http.StatusOK)
 }
 
 func signupHandlerPost(w http.ResponseWriter, r *http.Request) {
@@ -207,19 +200,19 @@ func signupHandlerPost(w http.ResponseWriter, r *http.Request) {
 	_, err = queryUser(req.Username)
 	switch {
 	case err == nil:
-		http.Error(w, "user exists", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	case err == sql.ErrNoRows:
 		err = addUser(req)
 		if err != nil {
-			panic(err.Error())
-			http.Error(w, "add user fails", http.StatusInternalServerError)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		fmt.Fprint(w, "YES")
+		w.WriteHeader(http.StatusOK)
+		return
 	default:
-		panic(err.Error())
-		fmt.Fprint(w, "error")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 }
