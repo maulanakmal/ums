@@ -26,7 +26,8 @@ type Request struct {
 }
 
 type Response struct {
-	Status string
+	Status  string
+	Message string
 }
 
 type User struct {
@@ -92,52 +93,93 @@ func handleRequest(conn net.Conn) {
 
 	switch {
 	case request.Name == "login":
+		login(conn, request.Args[0], request.Args[1])
 	case request.Name == "signup":
 	case request.Name == "changeNickname":
 	}
 }
 
-func login(username string, password string) {
+func login(conn net.Conn, username string, password string) {
+	encoder := gob.NewEncoder(conn)
+
+	failResponse := Response{
+		Status:  "ERROR",
+		Message: "login failed",
+	}
 	var user User
 	user, err := queryUser(username)
 	if err != nil {
+		encoder.Encode(failResponse)
 		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
+		encoder.Encode(failResponse)
 		return
 	}
+
+	successResponse := Response{
+		Status:  "OK",
+		Message: "login success",
+	}
+	encoder.Encode(successResponse)
 }
 
-func singUp(username string, password string, nickname string) {
+func singUp(conn net.Conn, username string, password string, nickname string) {
+	encoder := gob.NewEncoder(conn)
+
+	failResponse := Response{
+		Status:  "ERROR",
+		Message: "signup failed",
+	}
+
 	_, err := queryUser(username)
 	switch {
 	case err == nil:
+		encoder.Encode(failResponse)
 		return
 	case err == sql.ErrNoRows:
 		err = addUser(username, password, nickname)
 		if err != nil {
+			encoder.Encode(failResponse)
 			return
 		}
-		return
-	default:
-		return
 	}
+	successResponse := Response{
+		Status:  "OK",
+		Message: "singup success",
+	}
+	encoder.Encode(successResponse)
 
 }
 
-func changeNickname(username string, nickname string) {
+func changeNickname(conn net.Conn, username string, nickname string) {
+	encoder := gob.NewEncoder(conn)
+
+	failResponse := Response{
+		Status:  "ERROR",
+		Message: "change nickname failed",
+	}
+
 	_, err := queryUser(username)
 	if err != nil {
+		encoder.Encode(failResponse)
 		return
 	}
 
 	sqlStatement := "UPDATE user_tab SET nickname = ? WHERE username = ?"
 	_, err = db.Exec(sqlStatement, nickname, username)
 	if err != nil {
+		encoder.Encode(failResponse)
 		return
 	}
+
+	successResponse := Response{
+		Status:  "OK",
+		Message: "change nickname success",
+	}
+	encoder.Encode(successResponse)
 }
 
 func queryUser(username string) (User, error) {
