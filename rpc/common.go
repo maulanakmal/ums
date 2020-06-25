@@ -1,4 +1,4 @@
-package main
+package rpc
 
 type Request struct {
 	Name string
