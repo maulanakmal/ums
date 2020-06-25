@@ -76,8 +76,6 @@ func (server *Server) ListenAndServe() error {
 		}
 		go handleRequest(conn)
 	}
-
-	return nil
 }
 
 func handleRequest(conn net.Conn) {
@@ -95,7 +93,9 @@ func handleRequest(conn net.Conn) {
 	case request.Name == "login":
 		login(conn, request.Args[0], request.Args[1])
 	case request.Name == "signup":
+		singUp(conn, request.Args[0], request.Args[1], request.Args[2])
 	case request.Name == "changeNickname":
+		changeNickname(conn, request.Args[0], request.Args[1])
 	}
 }
 
@@ -134,6 +134,11 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 		Message: "signup failed",
 	}
 
+	successResponse := Response{
+		Status:  "OK",
+		Message: "singup success",
+	}
+
 	_, err := queryUser(username)
 	switch {
 	case err == nil:
@@ -145,12 +150,11 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 			encoder.Encode(failResponse)
 			return
 		}
+		encoder.Encode(successResponse)
+	default:
+		encoder.Encode(failResponse)
+		return
 	}
-	successResponse := Response{
-		Status:  "OK",
-		Message: "singup success",
-	}
-	encoder.Encode(successResponse)
 
 }
 

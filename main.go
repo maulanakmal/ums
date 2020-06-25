@@ -32,12 +32,10 @@ func main() {
 	}
 	encoder := gob.NewEncoder(conn)
 	decoder := gob.NewDecoder(conn)
-
-	request := Request{Name: "login", Args: []string{"mol", "mol"}}
-
+	request := Request{Name: "changeNickname", Args: []string{"mol2", "molana"}}
 	var response Response
 	encoder.Encode(request)
 	decoder.Decode(&response)
-
 	log.Printf("response %q", response)
+
 }
