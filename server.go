@@ -20,16 +20,6 @@ type Server struct {
 	Port string
 }
 
-type Request struct {
-	Name string
-	Args []string
-}
-
-type Response struct {
-	Status  string
-	Message string
-}
-
 type User struct {
 	Username string
 	Nickname string
