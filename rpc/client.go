@@ -10,7 +10,7 @@ type Client struct {
 	Addr string
 }
 
-func (client *Client) call(request Request) (*Response, error) {
+func (client *Client) Call(request Request) (*Response, error) {
 	if client.Addr == "" {
 		return nil, errors.New("client addr is not set")
 	}

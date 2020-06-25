@@ -82,7 +82,7 @@ func handleRequest(conn net.Conn) {
 	switch {
 	case request.Name == "login":
 		login(conn, request.Args[0], request.Args[1])
-	case request.Name == "signup":
+	case request.Name == "signUp":
 		singUp(conn, request.Args[0], request.Args[1], request.Args[2])
 	case request.Name == "changeNickname":
 		changeNickname(conn, request.Args[0], request.Args[1])
@@ -130,19 +130,23 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 	}
 
 	_, err := queryUser(username)
+	log.Printf("log here")
 	switch {
 	case err == nil:
 		encoder.Encode(failResponse)
+		log.Printf("log here err nil")
 		return
 	case err == sql.ErrNoRows:
 		err = addUser(username, password, nickname)
 		if err != nil {
 			encoder.Encode(failResponse)
+			log.Printf("log here after add user")
 			return
 		}
 		encoder.Encode(successResponse)
 	default:
 		encoder.Encode(failResponse)
+		log.Printf("log here default")
 		return
 	}
 
