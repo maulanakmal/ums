@@ -62,11 +62,12 @@ func handleSignUp(w http.ResponseWriter, r *http.Request) {
 func handleChangeNickname(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	nickname := r.FormValue("nickname")
+	token := r.FormValue("token")
 	client := &rpc.Client{Addr: "localhost:6000"}
 
 	request := rpc.Request{
 		Name: "changeNickname",
-		Args: []string{username, nickname},
+		Args: []string{username, nickname, token},
 	}
 
 	response, err := client.Call(request)

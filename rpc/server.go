@@ -3,11 +3,13 @@ package rpc
 import (
 	"database/sql"
 	"encoding/gob"
+	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 const (
@@ -28,6 +30,7 @@ type User struct {
 }
 
 var db *sql.DB
+var jwtSecret []byte
 
 func getDSN() string {
 	db_host_ip := os.Getenv("DB_HOST_IP")
@@ -48,7 +51,12 @@ func initDB() {
 	}
 }
 
+func initJWT() {
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+}
+
 func (server *Server) ListenAndServe() error {
+	initJWT()
 	initDB()
 
 	listener, err := net.Listen(protocol, defaultAddress+":"+server.Port)
@@ -85,8 +93,31 @@ func handleRequest(conn net.Conn) {
 	case request.Name == "signUp":
 		singUp(conn, request.Args[0], request.Args[1], request.Args[2])
 	case request.Name == "changeNickname":
-		changeNickname(conn, request.Args[0], request.Args[1])
+		changeNickname(conn, request.Args[0], request.Args[1], request.Args[2])
 	}
+}
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.StandardClaims
+}
+
+func getJWTToken(username string) (string, error) {
+	claims := &Claims{
+		Username: username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(60 * time.Minute).Unix(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+func decodeJWTToken(token string) (*jwt.Token, error) {
+	claims := &Claims{}
+	return jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtSecret, nil
+	})
 }
 
 func login(conn net.Conn, username string, password string) {
@@ -109,10 +140,13 @@ func login(conn net.Conn, username string, password string) {
 		return
 	}
 
+	tokenString, err := getJWTToken(username)
+	log.Printf("tokenString = %s", tokenString)
 	successResponse := Response{
 		Status:  "OK",
-		Message: "login success",
+		Message: tokenString,
 	}
+
 	encoder.Encode(successResponse)
 }
 
@@ -152,7 +186,7 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 
 }
 
-func changeNickname(conn net.Conn, username string, nickname string) {
+func changeNickname(conn net.Conn, username string, nickname string, token string) {
 	encoder := gob.NewEncoder(conn)
 
 	failResponse := Response{
@@ -160,7 +194,12 @@ func changeNickname(conn net.Conn, username string, nickname string) {
 		Message: "change nickname failed",
 	}
 
-	_, err := queryUser(username)
+	_, err := decodeJWTToken(token)
+	if err != nil {
+		encoder.Encode(failResponse)
+		return
+	}
+	_, err = queryUser(username)
 	if err != nil {
 		encoder.Encode(failResponse)
 		return
