@@ -1,9 +1,13 @@
 package main
 
 import (
-	"./rpc"
+	b64 "encoding/base64"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
+
+	"./rpc"
 )
 
 func main() {
@@ -11,6 +15,7 @@ func main() {
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/signUp", handleSignUp)
 	http.HandleFunc("/changeNickname", handleChangeNickname)
+	http.HandleFunc("/changePicture", handleChangePicture)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -76,4 +81,30 @@ func handleChangeNickname(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Printf("/changeNickname response = %q", response)
+}
+
+func handleChangePicture(w http.ResponseWriter, r *http.Request) {
+	username := r.FormValue("username")
+	picFile, header, _ := r.FormFile("file")
+	defer picFile.Close()
+
+	picBin, err := ioutil.ReadAll(picFile)
+	filename := header.Filename
+	fileExt := strings.ToLower(filename[len(filename)-3:])
+
+	b64pic := b64.RawStdEncoding.EncodeToString(picBin)
+	log.Printf("b64pic %v", b64pic[:100])
+
+	client := &rpc.Client{Addr: "localhost:6000"}
+	request := rpc.Request{
+		Name: "changePicture",
+		Args: []string{username, b64pic, fileExt},
+	}
+
+	response, err := client.Call(request)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+
+	log.Printf("/changePicture response = %q", response)
 }
