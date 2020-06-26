@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"database/sql"
+	b64 "encoding/base64"
 	"encoding/gob"
 	"github.com/dgrijalva/jwt-go"
 	_ "github.com/go-sql-driver/mysql"
@@ -93,7 +94,10 @@ func handleRequest(db *sql.DB, conn net.Conn) {
 		singUp(db, conn, request.Args[0], request.Args[1], request.Args[2])
 	case request.Name == "changeNickname":
 		changeNickname(db, conn, request.Args[0], request.Args[1], request.Args[2])
+	case request.Name == "changePicture":
+		changeProfilePic(db, conn, request.Args[0], request.Args[1], request.Args[2])
 	}
+
 }
 
 type Claims struct {
@@ -215,6 +219,36 @@ func changeNickname(db *sql.DB, conn net.Conn, username string, nickname string,
 	successResponse := Response{
 		Status:  "OK",
 		Message: "change nickname success",
+	}
+	encoder.Encode(successResponse)
+}
+
+func changeProfilePic(db *sql.DB, conn net.Conn, username string, base64pic string, fileExt string) {
+	encoder := gob.NewEncoder(conn)
+	failResponse := Response{
+		Status:  "ERROR",
+		Message: "change nickname failed",
+	}
+
+	pic, err := b64.RawStdEncoding.DecodeString(base64pic)
+	if err != nil {
+		encoder.Encode(failResponse)
+	}
+
+	file, err := os.OpenFile("/var/ums/pic/"+username+"."+fileExt, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		encoder.Encode(failResponse)
+	}
+	defer file.Close()
+
+	_, err = file.Write(pic)
+	if err != nil {
+		encoder.Encode(failResponse)
+	}
+
+	successResponse := Response{
+		Status:  "OK",
+		Message: "change profile success",
 	}
 	encoder.Encode(successResponse)
 }
