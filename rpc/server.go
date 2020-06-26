@@ -71,11 +71,11 @@ func (server *Server) ListenAndServe() error {
 		if err != nil {
 			panic(err.Error())
 		}
-		go handleRequest(conn)
+		go handleRequest(db, conn)
 	}
 }
 
-func handleRequest(conn net.Conn) {
+func handleRequest(db *sql.DB, conn net.Conn) {
 	decoder := gob.NewDecoder(conn)
 	defer conn.Close()
 	log.Printf("inside request")
@@ -88,11 +88,11 @@ func handleRequest(conn net.Conn) {
 
 	switch {
 	case request.Name == "login":
-		login(conn, request.Args[0], request.Args[1])
+		login(db, conn, request.Args[0], request.Args[1])
 	case request.Name == "signUp":
-		singUp(conn, request.Args[0], request.Args[1], request.Args[2])
+		singUp(db, conn, request.Args[0], request.Args[1], request.Args[2])
 	case request.Name == "changeNickname":
-		changeNickname(conn, request.Args[0], request.Args[1], request.Args[2])
+		changeNickname(db, conn, request.Args[0], request.Args[1], request.Args[2])
 	}
 }
 
@@ -119,7 +119,7 @@ func decodeJWTToken(token string) (*jwt.Token, error) {
 	})
 }
 
-func login(conn net.Conn, username string, password string) {
+func login(db *sql.DB, conn net.Conn, username string, password string) {
 	encoder := gob.NewEncoder(conn)
 
 	failResponse := Response{
@@ -127,7 +127,7 @@ func login(conn net.Conn, username string, password string) {
 		Message: "login failed",
 	}
 	var user User
-	user, err := queryUser(username)
+	user, err := queryUser(db, username)
 	if err != nil {
 		encoder.Encode(failResponse)
 		return
@@ -140,7 +140,6 @@ func login(conn net.Conn, username string, password string) {
 	}
 
 	tokenString, err := getJWTToken(username)
-	log.Printf("tokenString = %s", tokenString)
 	successResponse := Response{
 		Status:  "OK",
 		Message: tokenString,
@@ -149,7 +148,8 @@ func login(conn net.Conn, username string, password string) {
 	encoder.Encode(successResponse)
 }
 
-func singUp(conn net.Conn, username string, password string, nickname string) {
+func singUp(db *sql.DB, conn net.Conn, username string, password string, nickname string) {
+	log.Println("signup")
 	encoder := gob.NewEncoder(conn)
 
 	failResponse := Response{
@@ -162,19 +162,22 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 		Message: "singup success",
 	}
 
-	_, err := queryUser(username)
+	_, err := queryUser(db, username)
+	log.Printf("err = %+v\n", err)
 	switch {
 	case err == nil:
 		encoder.Encode(failResponse)
 		log.Printf("log here err nil")
 		return
 	case err == sql.ErrNoRows:
-		err = addUser(username, password, nickname)
+		err = addUser(db, username, password, nickname)
+		log.Printf("err = %+v\n", err)
 		if err != nil {
 			encoder.Encode(failResponse)
 			log.Printf("log here after add user")
 			return
 		}
+		log.Printf("err = %+v\n", err)
 		encoder.Encode(successResponse)
 	default:
 		encoder.Encode(failResponse)
@@ -183,7 +186,7 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 
 }
 
-func changeNickname(conn net.Conn, username string, nickname string, token string) {
+func changeNickname(db *sql.DB, conn net.Conn, username string, nickname string, token string) {
 	encoder := gob.NewEncoder(conn)
 
 	failResponse := Response{
@@ -196,7 +199,7 @@ func changeNickname(conn net.Conn, username string, nickname string, token strin
 		encoder.Encode(failResponse)
 		return
 	}
-	_, err = queryUser(username)
+	_, err = queryUser(db, username)
 	if err != nil {
 		encoder.Encode(failResponse)
 		return
@@ -216,7 +219,7 @@ func changeNickname(conn net.Conn, username string, nickname string, token strin
 	encoder.Encode(successResponse)
 }
 
-func queryUser(username string) (User, error) {
+func queryUser(db *sql.DB, username string) (User, error) {
 	var user User
 	sqlStatement := "SELECT username, nickname, password FROM user_tab WHERE username = ?"
 	err := db.QueryRow(sqlStatement, username).Scan(&user.Username, &user.Nickname, &user.Password)
@@ -224,7 +227,7 @@ func queryUser(username string) (User, error) {
 	return user, err
 }
 
-func addUser(username string, password string, nickname string) error {
+func addUser(db *sql.DB, username string, password string, nickname string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
