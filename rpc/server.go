@@ -26,7 +26,6 @@ type User struct {
 	Username string
 	Nickname string
 	Password string
-	PicID    string
 }
 
 var db *sql.DB
@@ -164,7 +163,6 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 	}
 
 	_, err := queryUser(username)
-	log.Printf("log here")
 	switch {
 	case err == nil:
 		encoder.Encode(failResponse)
@@ -180,7 +178,6 @@ func singUp(conn net.Conn, username string, password string, nickname string) {
 		encoder.Encode(successResponse)
 	default:
 		encoder.Encode(failResponse)
-		log.Printf("log here default")
 		return
 	}
 
@@ -221,8 +218,8 @@ func changeNickname(conn net.Conn, username string, nickname string, token strin
 
 func queryUser(username string) (User, error) {
 	var user User
-	sqlStatement := "SELECT username, nickname, password, pic_id FROM user_tab WHERE username = ?"
-	err := db.QueryRow(sqlStatement, username).Scan(&user.Username, &user.Nickname, &user.Password, &user.PicID)
+	sqlStatement := "SELECT username, nickname, password FROM user_tab WHERE username = ?"
+	err := db.QueryRow(sqlStatement, username).Scan(&user.Username, &user.Nickname, &user.Password)
 
 	return user, err
 }
