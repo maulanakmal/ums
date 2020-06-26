@@ -85,6 +85,7 @@ func handleChangeNickname(w http.ResponseWriter, r *http.Request) {
 
 func handleChangePicture(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
+	token := r.FormValue("token")
 	picFile, header, _ := r.FormFile("file")
 	defer picFile.Close()
 
@@ -98,7 +99,7 @@ func handleChangePicture(w http.ResponseWriter, r *http.Request) {
 	client := &rpc.Client{Addr: "localhost:6000"}
 	request := rpc.Request{
 		Name: "changePicture",
-		Args: []string{username, b64pic, fileExt},
+		Args: []string{username, b64pic, fileExt, token},
 	}
 
 	response, err := client.Call(request)

@@ -95,7 +95,7 @@ func handleRequest(db *sql.DB, conn net.Conn) {
 	case request.Name == "changeNickname":
 		changeNickname(db, conn, request.Args[0], request.Args[1], request.Args[2])
 	case request.Name == "changePicture":
-		changeProfilePic(db, conn, request.Args[0], request.Args[1], request.Args[2])
+		changeProfilePic(db, conn, request.Args[0], request.Args[1], request.Args[2], request.Args[3])
 	}
 
 }
@@ -223,11 +223,17 @@ func changeNickname(db *sql.DB, conn net.Conn, username string, nickname string,
 	encoder.Encode(successResponse)
 }
 
-func changeProfilePic(db *sql.DB, conn net.Conn, username string, base64pic string, fileExt string) {
+func changeProfilePic(db *sql.DB, conn net.Conn, username string, base64pic string, fileExt string, token string) {
 	encoder := gob.NewEncoder(conn)
 	failResponse := Response{
 		Status:  "ERROR",
 		Message: "change nickname failed",
+	}
+
+	_, err := decodeJWTToken(token)
+	if err != nil {
+		encoder.Encode(failResponse)
+		return
 	}
 
 	pic, err := b64.RawStdEncoding.DecodeString(base64pic)
