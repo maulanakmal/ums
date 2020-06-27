@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./rpc"
+	"../rpc"
 	"log"
 )
 
