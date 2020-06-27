@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"./rpc"
+	"github.com/maulanakmal/ums/rpc"
 )
 
 func main() {
