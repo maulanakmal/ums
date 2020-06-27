@@ -1,7 +1,7 @@
 package main
 
 import (
-	"../rpc"
+	"github.com/maulanakmal/ums/rpc"
 	"log"
 )
 
