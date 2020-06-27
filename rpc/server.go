@@ -20,7 +20,7 @@ const (
 	protocol       = "tcp"
 	defaultPort    = "6000"
 	defaultAddress = "localhost"
-	redisPort      = "6739"
+	redisPort      = "6379"
 )
 
 type Server struct {
