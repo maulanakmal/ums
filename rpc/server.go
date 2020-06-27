@@ -1,22 +1,26 @@
 package rpc
 
 import (
+	"context"
 	"database/sql"
 	b64 "encoding/base64"
 	"encoding/gob"
-	"github.com/dgrijalva/jwt-go"
-	_ "github.com/go-sql-driver/mysql"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net"
 	"os"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/go-redis/redis/v8"
+	_ "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
 	protocol       = "tcp"
 	defaultPort    = "6000"
 	defaultAddress = "localhost"
+	redisPort      = "6739"
 )
 
 type Server struct {
@@ -31,14 +35,16 @@ type User struct {
 
 var db *sql.DB
 var jwtSecret []byte
+var ctx = context.Background()
+var redisClient *redis.Client
 
 func getDSN() string {
-	db_host_ip := os.Getenv("DB_HOST_IP")
-	db_host := "tcp(" + db_host_ip + ")"
-	db_user := os.Getenv("DB_USER")
-	db_pass := os.Getenv("DB_PASS")
-	db_name := os.Getenv("DB_NAME")
-	DSN := db_user + ":" + db_pass + "@" + db_host + "/" + db_name
+	dbHostIP := os.Getenv("DB_HOST_IP")
+	dbHost := "tcp(" + dbHostIP + ")"
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASS")
+	dbName := os.Getenv("DB_NAME")
+	DSN := dbUser + ":" + dbPass + "@" + dbHost + "/" + dbName
 
 	return DSN
 }
@@ -55,9 +61,22 @@ func initJWT() {
 	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 }
 
+func initRedis() {
+	dbHostIP := os.Getenv("DB_HOST_IP")
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     dbHostIP + ":" + redisPort,
+		Password: "",
+		DB:       0,
+	})
+
+	pong, err := redisClient.Ping(ctx).Result()
+	log.Println(pong, err)
+}
+
 func (server *Server) ListenAndServe() error {
 	initJWT()
 	initDB()
+	initRedis()
 
 	listener, err := net.Listen(protocol, defaultAddress+":"+server.Port)
 
